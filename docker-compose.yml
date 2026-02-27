@@ -1,0 +1,56 @@
+# =============================================
+# Docker Compose - EventSphere
+# =============================================
+# Orchestrates the containerized application
+#
+# Services:
+#   - frontend: React app served via Nginx on port 80
+#
+# Networking:
+#   - eventsphere-network: Isolated bridge network
+#   - Only port 80 is exposed to the host
+#
+# Usage:
+#   docker-compose up -d --build
+#   docker-compose down
+#   docker-compose logs -f
+# =============================================
+
+services:
+  # ==========================================
+  # Frontend Service (React + Nginx)
+  # ==========================================
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Pass Supabase env vars at build time (React needs them during build)
+        REACT_APP_SUPABASE_URL: ${REACT_APP_SUPABASE_URL}
+        REACT_APP_SUPABASE_ANON_KEY: ${REACT_APP_SUPABASE_ANON_KEY}
+    container_name: eventsphere-frontend
+    ports:
+      # Map host port 80 to container port 80
+      # Only this port is exposed externally
+      - "80:80"
+    restart: unless-stopped
+    networks:
+      - eventsphere-network
+    # Health check
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+# =============================================
+# Networks
+# =============================================
+# Isolated bridge network for the application
+# - Containers can communicate internally
+# - Only explicitly mapped ports are accessible from host
+networks:
+  eventsphere-network:
+    driver: bridge
+    name: eventsphere-network
