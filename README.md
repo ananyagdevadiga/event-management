@@ -194,13 +194,16 @@ CREATE INDEX idx_registrations_event_id ON registrations(event_id);
 CREATE INDEX idx_registrations_user_id ON registrations(user_id);
 ```
 
-### 3. Disable Email Confirmation (for development)
+### 3. Trigger & roles
 
-In your Supabase dashboard:
-- Go to **Authentication** → **Providers** → **Email**
-- Toggle **OFF** "Confirm email"
+The SQL above also defines a PostgreSQL trigger (`handle_new_user`) that runs each time
+an auth user signs up. It inserts a matching row into `profiles`, using the
+`full_name` metadata and assigning the `role` column. The role becomes `admin`
+only if the new user’s email is found in a separate `admin_emails` table. That
+admin_emails table is kept small, contains just the addresses you trust, and
+should be kept out of version control – it’s not part of the frontend code.
 
-This lets users sign up and immediately sign in without email verification.
+
 
 ### 4. Add Supabase Keys
 
@@ -231,6 +234,27 @@ The app will run at **http://localhost:3000**
 2. **Create Account** → Choose **User** or **Admin** role
 3. **Admin login** → Redirected to Admin Dashboard (create events, edit, view registrations)
 4. **User login** → Redirected to User Dashboard (browse events, register, view registrations)
+
+## Docker & Nginx
+
+The project is packaged as a Docker image that embeds Nginx to serve the
+compiled React application. A multi‑stage `Dockerfile` first builds the React
+bundle with Node, then copies the static output into an `nginx:alpine` image.
+The custom `nginx/nginx.conf` ensures:
+
+* static files are served directly
+* unknown routes fall back to `index.html` for React Router
+* caching headers and basic security headers are applied
+
+A simple `docker-compose.yml` orchestrates this container and exposes port 80
+on the host. Running:
+
+```bash
+cd event-management
+docker-compose up -d --build
+```
+
+starts the app on **http://localhost** with no additional dependencies.
 
 ## Tech Stack
 
